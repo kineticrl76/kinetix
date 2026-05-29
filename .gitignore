@@ -18,6 +18,9 @@ prisma/dev.db-journal
 # uploads
 public/uploads/
 
+# Tesseract OCR training data (downloaded automatically at runtime)
+*.traineddata
+
 # misc
 .DS_Store
 *.log
