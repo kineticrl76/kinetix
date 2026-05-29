@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User Profile (NextAuth compatible) ───────────────────────────────────────
+// tax_config shape: [{ tax_name: string, effective_rate_percentage: number, deduction_type: "standard" | "itemized" }]
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  password      String?   // hashed — only set for credentials provider
+  base_currency String    @default("USD")
+  tax_config    String    @default("[]")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  incomes     Income[]
+  liabilities FixedLiability[]
+  expenses    VariableExpense[]
+  savings     SavingsAccount[]
+  goals       FinancialGoal[]
+
+  @@map("users")
+}
+
+// ─── NextAuth: Account ─────────────────────────────────────────────────────────
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// ─── NextAuth: Session ─────────────────────────────────────────────────────────
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── NextAuth: VerificationToken ──────────────────────────────────────────────
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── Pillar 1: Liquid Cash & Salary ───────────────────────────────────────────
+model Income {
+  id                    String   @id @default(cuid())
+  userId                String
+  source                String
+  category              String   @default("salary") // salary | freelance | passive | dividend | bonus
+  amount                Float
+  local_currency        String   @default("USD")
+  exchange_rate_to_base Float    @default(1.0)
+  frequency             String   @default("monthly") // monthly | weekly | bi-weekly | one-time
+  received_at           DateTime
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, received_at])
+  @@map("incomes")
+}
+
+// ─── Pillar 2: Fixed Liabilities ──────────────────────────────────────────────
+model FixedLiability {
+  id                    String    @id @default(cuid())
+  userId                String
+  name                  String
+  category              String    @default("subscription") // insurance | subscription | loan | social_security | rent | utilities | tax
+  amount                Float
+  local_currency        String    @default("USD")
+  exchange_rate_to_base Float     @default(1.0)
+  billing_cycle         String    @default("monthly") // monthly | quarterly | semi-annual | annual
+  next_payment_date     DateTime
+  renewal_date          DateTime?
+  is_active             Boolean   @default(true)
+  notes                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, next_payment_date])
+  @@map("fixed_liabilities")
+}
+
+// ─── Pillar 3: Variable Expenses ──────────────────────────────────────────────
+model VariableExpense {
+  id                    String   @id @default(cuid())
+  userId                String
+  merchant              String
+  category              String   @default("general") // food | transport | entertainment | shopping | health | business | utilities | general
+  amount                Float
+  local_currency        String   @default("USD")
+  exchange_rate_to_base Float    @default(1.0)
+  is_tax_deductible     Boolean  @default(false)
+  transaction_date      DateTime
+  card_id               String?
+  notes                 String?
+  source                String   @default("manual") // manual | sms | receipt_scan
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receipt Receipt?
+
+  @@index([userId, transaction_date])
+  @@index([userId, is_tax_deductible])
+  @@map("variable_expenses")
+}
+
+// ─── Receipt (linked 1:1 to VariableExpense) ──────────────────────────────────
+model Receipt {
+  id          String   @id @default(cuid())
+  expenseId   String   @unique
+  file_url    String
+  file_name   String?
+  mime_type   String?
+  raw_text    String?  // LLM-extracted raw text
+  parsed_data String?  // JSON string: { amount, merchant, date, currency, line_items[] }
+  createdAt   DateTime @default(now())
+
+  expense VariableExpense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@map("receipts")
+}
+
+// ─── Pillar 4: Savings & Investments ──────────────────────────────────────────
+model SavingsAccount {
+  id                    String   @id @default(cuid())
+  userId                String
+  name                  String
+  institution           String
+  account_type          String   @default("savings") // savings | checking | investment | retirement | crypto | real_estate | emergency
+  balance               Float    @default(0)
+  local_currency        String   @default("USD")
+  exchange_rate_to_base Float    @default(1.0)
+  last_updated          DateTime @default(now())
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("savings_accounts")
+}
+
+// ─── Pillar 5: Financial Goals ─────────────────────────────────────────────────
+model FinancialGoal {
+  id                    String   @id @default(cuid())
+  userId                String
+  name                  String
+  category              String   @default("general") // emergency_fund | vacation | home | retirement | education | vehicle | business | general
+  target_amount         Float
+  current_amount        Float    @default(0)
+  local_currency        String   @default("USD")
+  exchange_rate_to_base Float    @default(1.0)
+  target_date           DateTime
+  is_completed          Boolean  @default(false)
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("financial_goals")
+}
+
+// ─── SMS Ingest Log ────────────────────────────────────────────────────────────
+model SmsLog {
+  id           String   @id @default(cuid())
+  raw_message  String
+  parsed_data  String?  // JSON string: { amount, merchant, date, card_id, currency }
+  status       String   @default("pending") // pending | matched | unmatched | error
+  expense_id   String?  // linked VariableExpense if matched
+  source_phone String?
+  received_at  DateTime @default(now())
+
+  @@index([status])
+  @@map("sms_logs")
+}
