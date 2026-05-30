@@ -2,10 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-parse', 'tesseract.js', '@napi-rs/canvas', 'pdfjs-dist', 'node-poppler'],
-  staticPageGenerationTimeout: 0, // Disable static generation timeout for free tier
-  experimental: {
-    isrMemoryCacheSize: 0, // Disable ISR memory cache
-  },
+  staticPageGenerationTimeout: 180, // 3 minutes timeout for free tier
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
