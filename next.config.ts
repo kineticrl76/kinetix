@@ -1,8 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   serverExternalPackages: ['pdf-parse', 'tesseract.js', '@napi-rs/canvas', 'pdfjs-dist', 'node-poppler'],
-  staticPageGenerationTimeout: 180,
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
