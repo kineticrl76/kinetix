@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const log = await prisma.smsLog.create({
     data: {
       raw_message: body.message,
-      parsed_data: parsed ?? undefined,
+      parsed_data: parsed ? JSON.stringify(parsed) : null,
       status: parsed ? 'pending' : 'unmatched',
       source_phone: body.from,
     },
