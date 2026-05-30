@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 import { DollarSign, ArrowDownCircle, ShoppingCart, PiggyBank, AlertCircle, RefreshCw } from 'lucide-react';
 
 import NetPositionCard from '@/components/dashboard/NetPositionCard';
@@ -17,7 +17,7 @@ import ReceiptUpload from '@/components/ReceiptUpload';
 import StatementImport from '@/components/StatementImport';
 
 // Recharts requires client-only rendering
-const TrendsChart = dynamic(() => import('@/components/dashboard/TrendsChart'), { ssr: false });
+const TrendsChart = dynamicImport(() => import('@/components/dashboard/TrendsChart'), { ssr: false });
 
 import { useAuth } from '@/lib/useAuth';
 import { useCurrency } from '@/context/CurrencyContext';
