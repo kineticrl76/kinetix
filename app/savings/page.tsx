@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Pencil, PiggyBank } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
